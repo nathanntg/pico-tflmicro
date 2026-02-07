@@ -1,4 +1,4 @@
-/* Copyright 2022 The TensorFlow Authors. All Rights Reserved.
+/* Copyright 2025 The TensorFlow Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ limitations under the License.
 #include "tensorflow/lite/micro/kernels/kernel_runner.h"
 #include "tensorflow/lite/micro/micro_utils.h"
 #include "tensorflow/lite/micro/test_helpers.h"
-#include "tensorflow/lite/micro/testing/micro_test.h"
+#include "tensorflow/lite/micro/testing/micro_test_v2.h"
 
 namespace {
 using ::tflite::testing::CreateTensor;
@@ -44,11 +44,12 @@ tflite::micro::KernelRunner CreateBroadcastToTestRunner(
 
   tensors[0] = CreateTensor(input_data, IntArrayFromInts(input_shape));
   tensors[1] = CreateTensor(dims_data, IntArrayFromInts(dims_shape));
+  // shape must be a const tensor
+  tensors[1].allocation_type = kTfLiteMmapRo;
   tensors[2] = CreateTensor(output_data, IntArrayFromInts(output_shape));
 
   // The output type matches the value type.
-  TF_LITE_MICRO_EXPECT_EQ(tensors[kOutputIndex].type,
-                          tensors[kInputIndex].type);
+  EXPECT_EQ(tensors[kOutputIndex].type, tensors[kInputIndex].type);
 
   registration = tflite::Register_BROADCAST_TO();
   tflite::micro::KernelRunner runner = tflite::micro::KernelRunner(
@@ -67,20 +68,18 @@ void TestBroadcastTo(int* dims_shape, DimsType* dims_data, int* input_shape,
       CreateBroadcastToTestRunner(dims_shape, dims_data, input_shape,
                                   input_data, output_shape, output_data);
 
-  TF_LITE_MICRO_EXPECT_EQ(runner.InitAndPrepare(), kTfLiteOk);
-  TF_LITE_MICRO_EXPECT_EQ(runner.Invoke(), kTfLiteOk);
+  EXPECT_EQ(runner.InitAndPrepare(), kTfLiteOk);
+  EXPECT_EQ(runner.Invoke(), kTfLiteOk);
 
   // The output elements contain the fill value.
   const auto elements = tflite::ElementCount(*IntArrayFromInts(output_shape));
   for (int i = 0; i < elements; ++i) {
-    TF_LITE_MICRO_EXPECT_EQ(output_data[i], expected_output_data[i]);
+    EXPECT_EQ(output_data[i], expected_output_data[i]);
   }
 }
 }  // namespace
 
-TF_LITE_MICRO_TESTS_BEGIN
-
-TF_LITE_MICRO_TEST(ShapeMustBe1D) {
+TEST(BroadcastToTest, ShapeMustBe1D) {
   int dims_shape[] = {2, 2, 2};
   int32_t dims_data[] = {2, 3, 4, 4};
 
@@ -94,10 +93,10 @@ TF_LITE_MICRO_TEST(ShapeMustBe1D) {
       CreateBroadcastToTestRunner(dims_shape, dims_data, input_shape,
                                   input_data, output_shape, output_data);
 
-  TF_LITE_MICRO_EXPECT_EQ(runner.InitAndPrepare(), kTfLiteError);
+  EXPECT_EQ(runner.InitAndPrepare(), kTfLiteError);
 }
 
-TF_LITE_MICRO_TEST(TooManyDimensionShouldFail) {
+TEST(BroadcastToTest, TooManyDimensionShouldFail) {
   int dims_shape[] = {1, 6};
   int32_t dims_data[] = {2, 2, 2, 2, 2, 2};
 
@@ -111,10 +110,10 @@ TF_LITE_MICRO_TEST(TooManyDimensionShouldFail) {
       CreateBroadcastToTestRunner(dims_shape, dims_data, input_shape,
                                   input_data, output_shape, output_data);
 
-  TF_LITE_MICRO_EXPECT_EQ(runner.InitAndPrepare(), kTfLiteError);
+  EXPECT_EQ(runner.InitAndPrepare(), kTfLiteError);
 }
 
-TF_LITE_MICRO_TEST(MismatchDimensionShouldFail) {
+TEST(BroadcastToTest, MismatchDimensionShouldFail) {
   int dims_shape[] = {1, 4};
   int32_t dims_data[] = {2, 4, 1, 3};
 
@@ -128,10 +127,10 @@ TF_LITE_MICRO_TEST(MismatchDimensionShouldFail) {
       CreateBroadcastToTestRunner(dims_shape, dims_data, input_shape,
                                   input_data, output_shape, output_data);
 
-  TF_LITE_MICRO_EXPECT_EQ(runner.InitAndPrepare(), kTfLiteError);
+  EXPECT_EQ(runner.InitAndPrepare(), kTfLiteError);
 }
 
-TF_LITE_MICRO_TEST(Broadcast1DConstTest) {
+TEST(BroadcastToTest, Broadcast1DConstTest) {
   constexpr int kDimension = 4;
   constexpr int kSize = 4;
   int dims_shape[] = {1, 1};
@@ -148,7 +147,7 @@ TF_LITE_MICRO_TEST(Broadcast1DConstTest) {
                   output_data, expected_output_data);
 }
 
-TF_LITE_MICRO_TEST(Broadcast4DConstTest) {
+TEST(BroadcastToTest, Broadcast4DConstTest) {
   int dims_shape[] = {1, 4};
   int32_t dims_data[] = {2, 2, 2, 2};
 
@@ -164,7 +163,7 @@ TF_LITE_MICRO_TEST(Broadcast4DConstTest) {
                   output_data, expected_output_data);
 }
 
-TF_LITE_MICRO_TEST(ComplexBroadcast4DConstTest) {
+TEST(BroadcastToTest, ComplexBroadcast4DConstTest) {
   int dims_shape[] = {1, 4};
   int32_t dims_data[] = {3, 3, 2, 2};
 
@@ -181,7 +180,7 @@ TF_LITE_MICRO_TEST(ComplexBroadcast4DConstTest) {
                   output_data, expected_output_data);
 }
 
-TF_LITE_MICRO_TEST(NoBroadcastingConstTest) {
+TEST(BroadcastToTest, NoBroadcastingConstTest) {
   int dims_shape[] = {1, 3};
   int32_t dims_data[] = {3, 1, 2};
 
@@ -196,7 +195,7 @@ TF_LITE_MICRO_TEST(NoBroadcastingConstTest) {
                   output_data, expected_output_data);
 }
 
-TF_LITE_MICRO_TEST(BroadcastInt64ShapeTest) {
+TEST(BroadcastToTest, BroadcastInt64ShapeTest) {
   int dims_shape[] = {1, 4};
   int64_t dims_data[] = {1, 1, 2, 2};
 
@@ -211,4 +210,4 @@ TF_LITE_MICRO_TEST(BroadcastInt64ShapeTest) {
                   output_data, expected_output_data);
 }
 
-TF_LITE_MICRO_TESTS_END
+TF_LITE_MICRO_TESTS_MAIN

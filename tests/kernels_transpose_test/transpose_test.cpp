@@ -1,4 +1,4 @@
-/* Copyright 2021 The TensorFlow Authors. All Rights Reserved.
+/* Copyright 2025 The TensorFlow Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,9 +18,10 @@ limitations under the License.
 #include "tensorflow/lite/c/builtin_op_data.h"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/micro/kernels/kernel_runner.h"
+#include "tensorflow/lite/micro/kernels/transpose.h"
 #include "tensorflow/lite/micro/micro_utils.h"
 #include "tensorflow/lite/micro/test_helpers.h"
-#include "tensorflow/lite/micro/testing/micro_test.h"
+#include "tensorflow/lite/micro/testing/micro_test_v2.h"
 
 namespace tflite {
 namespace testing {
@@ -92,7 +93,7 @@ TfLiteStatus ValidateTranspose(TfLiteTensor* tensors, int tensors_size,
   }
 
   for (int i = 0; i < output_length; ++i) {
-    TF_LITE_MICRO_EXPECT_EQ(expected_output_data[i], output_data[i]);
+    EXPECT_EQ(expected_output_data[i], output_data[i]);
   }
   return kTfLiteOk;
 }
@@ -123,19 +124,19 @@ void TestTranspose(int* input_dims_data, T* input_data, int* output_dims_data,
       CreateTensor(params->perm, perm_dims),
       CreateTensor(output_data, output_dims),
   };
+  // perm must be a const tensor
+  tensors[kTransposePermTensor].allocation_type = kTfLiteMmapRo;
 
-  TF_LITE_MICRO_EXPECT_EQ(
-      kTfLiteOk, ValidateTranspose(tensors, tensors_size, expected_output_data,
-                                   output_data, output_dims_count, params));
+  EXPECT_EQ(kTfLiteOk,
+            ValidateTranspose(tensors, tensors_size, expected_output_data,
+                              output_data, output_dims_count, params));
 }
 
 }  // namespace
 }  // namespace testing
 }  // namespace tflite
 
-TF_LITE_MICRO_TESTS_BEGIN
-
-TF_LITE_MICRO_TEST(1D) {
+TEST(TransposeTest, 1D) {
   int input_dims_data[] = {1, 3};
   int output_dims_data[] = {1, 3};
 
@@ -149,7 +150,21 @@ TF_LITE_MICRO_TEST(1D) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(2DPerm1) {
+TEST(TransposeTest, 1DInt16) {
+  int input_dims_data[] = {1, 3};
+  int output_dims_data[] = {1, 3};
+
+  int16_t input_data[3];
+  int16_t output_data[3];
+  const int16_t expected_output_data[] = {0, 1, 2};
+
+  tflite::TransposeParams params = {1, {0}};
+
+  tflite::testing::TestTranspose(input_dims_data, input_data, output_dims_data,
+                                 expected_output_data, output_data, &params);
+}
+
+TEST(TransposeTest, 2DPerm1) {
   int input_dims_data[] = {2, 3, 2};
   int output_dims_data[] = {2, 3, 2};
 
@@ -163,7 +178,21 @@ TF_LITE_MICRO_TEST(2DPerm1) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(2D4x4KernelLeftOverRightSide) {
+TEST(TransposeTest, 2DPerm1Int16) {
+  int input_dims_data[] = {2, 3, 2};
+  int output_dims_data[] = {2, 3, 2};
+
+  int16_t input_data[6];
+  int16_t output_data[6];
+  const int16_t expected_output_data[] = {0, 2, 4, 1, 3, 5};
+
+  tflite::TransposeParams params = {2, {1, 0}};
+
+  tflite::testing::TestTranspose(input_dims_data, input_data, output_dims_data,
+                                 expected_output_data, output_data, &params);
+}
+
+TEST(TransposeTest, 2D4x4KernelLeftOverRightSide) {
   int input_dims_data[] = {2, 4, 6};
   int output_dims_data[] = {2, 4, 6};
 
@@ -179,7 +208,23 @@ TF_LITE_MICRO_TEST(2D4x4KernelLeftOverRightSide) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(2D4x4KernelLeftOverBottomSide) {
+TEST(TransposeTest, 2D4x4KernelLeftOverRightSideInt16) {
+  int input_dims_data[] = {2, 4, 6};
+  int output_dims_data[] = {2, 4, 6};
+
+  int16_t input_data[24];
+  int16_t output_data[24];
+  const int16_t expected_output_data[] = {0, 6,  12, 18, 1, 7,  13, 19,
+                                          2, 8,  14, 20, 3, 9,  15, 21,
+                                          4, 10, 16, 22, 5, 11, 17, 23};
+
+  tflite::TransposeParams params = {2, {1, 0}};
+
+  tflite::testing::TestTranspose(input_dims_data, input_data, output_dims_data,
+                                 expected_output_data, output_data, &params);
+}
+
+TEST(TransposeTest, 2D4x4KernelLeftOverBottomSide) {
   int input_dims_data[] = {2, 6, 4};
   int output_dims_data[] = {2, 4, 6};
 
@@ -195,7 +240,23 @@ TF_LITE_MICRO_TEST(2D4x4KernelLeftOverBottomSide) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(3D) {
+TEST(TransposeTest, 2D4x4KernelLeftOverBottomSideInt16) {
+  int input_dims_data[] = {2, 6, 4};
+  int output_dims_data[] = {2, 4, 6};
+
+  int16_t input_data[24];
+  int16_t output_data[24];
+  const int16_t expected_output_data[] = {0,  4,  8,  12, 16, 20, 1,  5,
+                                          9,  13, 17, 21, 2,  6,  10, 14,
+                                          18, 22, 3,  7,  11, 15, 19, 23};
+
+  tflite::TransposeParams params = {2, {1, 0}};
+
+  tflite::testing::TestTranspose(input_dims_data, input_data, output_dims_data,
+                                 expected_output_data, output_data, &params);
+}
+
+TEST(TransposeTest, 3D) {
   int input_dims_data[] = {3, 2, 3, 4};
   int output_dims_data[] = {3, 2, 3, 4};
 
@@ -211,7 +272,23 @@ TF_LITE_MICRO_TEST(3D) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(1DNotShrinked) {
+TEST(TransposeTest, 3DInt16) {
+  int input_dims_data[] = {3, 2, 3, 4};
+  int output_dims_data[] = {3, 2, 3, 4};
+
+  int16_t input_data[24];
+  int16_t output_data[24];
+  const int16_t expected_output_data[] = {0,  4,  8,  12, 16, 20, 1,  5,
+                                          9,  13, 17, 21, 2,  6,  10, 14,
+                                          18, 22, 3,  7,  11, 15, 19, 23};
+
+  tflite::TransposeParams params = {3, {2, 0, 1}};
+
+  tflite::testing::TestTranspose(input_dims_data, input_data, output_dims_data,
+                                 expected_output_data, output_data, &params);
+}
+
+TEST(TransposeTest, 1DNotShrinked) {
   int input_dims_data[] = {1, 1};
   int output_dims_data[] = {1, 1};
 
@@ -225,7 +302,7 @@ TF_LITE_MICRO_TEST(1DNotShrinked) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(2DShrinkedOneTime) {
+TEST(TransposeTest, 2DShrinkedOneTime) {
   int input_dims_data[] = {2, 2, 1};
   int output_dims_data[] = {2, 2, 1};
 
@@ -239,7 +316,7 @@ TF_LITE_MICRO_TEST(2DShrinkedOneTime) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(2DShrinkedTwoTimes) {
+TEST(TransposeTest, 2DShrinkedTwoTimes) {
   int input_dims_data[] = {2, 1, 1};
   int output_dims_data[] = {2, 1, 1};
 
@@ -253,7 +330,7 @@ TF_LITE_MICRO_TEST(2DShrinkedTwoTimes) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(3DShrinkedOneTime) {
+TEST(TransposeTest, 3DShrinkedOneTime) {
   int input_dims_data[] = {3, 2, 1, 3};
   int output_dims_data[] = {3, 2, 1, 3};
 
@@ -267,7 +344,7 @@ TF_LITE_MICRO_TEST(3DShrinkedOneTime) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(3DShrinkedTwoTimes) {
+TEST(TransposeTest, 3DShrinkedTwoTimes) {
   int input_dims_data[] = {3, 1, 1, 3};
   int output_dims_data[] = {3, 1, 1, 3};
 
@@ -281,7 +358,7 @@ TF_LITE_MICRO_TEST(3DShrinkedTwoTimes) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(3DShrinkedAll) {
+TEST(TransposeTest, 3DShrinkedAll) {
   int input_dims_data[] = {3, 1, 1, 1};
   int output_dims_data[] = {3, 1, 1, 1};
 
@@ -295,7 +372,7 @@ TF_LITE_MICRO_TEST(3DShrinkedAll) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(4DShrinkedOneTimes) {
+TEST(TransposeTest, 4DShrinkedOneTimes) {
   int input_dims_data[] = {4, 2, 2, 3, 1};
   int output_dims_data[] = {4, 2, 2, 3, 1};
 
@@ -309,7 +386,7 @@ TF_LITE_MICRO_TEST(4DShrinkedOneTimes) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(4DShrinkedTwoTimes) {
+TEST(TransposeTest, 4DShrinkedTwoTimes) {
   int input_dims_data[] = {4, 2, 1, 3, 1};
   int output_dims_data[] = {4, 2, 1, 3, 1};
 
@@ -323,7 +400,7 @@ TF_LITE_MICRO_TEST(4DShrinkedTwoTimes) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(4DShrinkedThreeTimes) {
+TEST(TransposeTest, 4DShrinkedThreeTimes) {
   int input_dims_data[] = {4, 2, 1, 1, 1};
   int output_dims_data[] = {4, 2, 1, 1, 1};
 
@@ -337,7 +414,7 @@ TF_LITE_MICRO_TEST(4DShrinkedThreeTimes) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(4DShrinkedFourTimes) {
+TEST(TransposeTest, 4DShrinkedFourTimes) {
   int input_dims_data[] = {4, 1, 1, 1, 1};
   int output_dims_data[] = {4, 1, 1, 1, 1};
 
@@ -351,7 +428,7 @@ TF_LITE_MICRO_TEST(4DShrinkedFourTimes) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(3DFlatten) {
+TEST(TransposeTest, 3DFlatten) {
   int input_dims_data[] = {3, 2, 2, 3};
   int output_dims_data[] = {3, 2, 2, 3};
 
@@ -365,7 +442,7 @@ TF_LITE_MICRO_TEST(3DFlatten) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(4DFlatten) {
+TEST(TransposeTest, 4DFlatten) {
   int input_dims_data[] = {4, 2, 2, 2, 2};
   int output_dims_data[] = {4, 2, 2, 2, 2};
 
@@ -380,7 +457,7 @@ TF_LITE_MICRO_TEST(4DFlatten) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(4DFlattenTwo) {
+TEST(TransposeTest, 4DFlattenTwo) {
   int input_dims_data[] = {4, 2, 2, 2, 2};
   int output_dims_data[] = {4, 2, 2, 2, 2};
 
@@ -395,7 +472,7 @@ TF_LITE_MICRO_TEST(4DFlattenTwo) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(3DDividedIntoTwo2DsOne) {
+TEST(TransposeTest, 3DDividedIntoTwo2DsOne) {
   float input_data[24];
   float expected_output_data[24];
   int32_t shape[] = {2, 3, 4};
@@ -413,7 +490,7 @@ TF_LITE_MICRO_TEST(3DDividedIntoTwo2DsOne) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(3DDividedIntoTwo2DsTwo) {
+TEST(TransposeTest, 3DDividedIntoTwo2DsTwo) {
   float input_data[24];
   float expected_output_data[24];
   int32_t shape[] = {2, 3, 4};
@@ -431,7 +508,7 @@ TF_LITE_MICRO_TEST(3DDividedIntoTwo2DsTwo) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(4DDividedIntoTwo2DsOne) {
+TEST(TransposeTest, 4DDividedIntoTwo2DsOne) {
   int32_t shape[] = {2, 3, 4, 2};
   int32_t perms[] = {1, 2, 3, 0};
   float input_data[48];
@@ -448,7 +525,7 @@ TF_LITE_MICRO_TEST(4DDividedIntoTwo2DsOne) {
   tflite::testing::TestTranspose(input_dims_data, input_data, output_dims_data,
                                  expected_output_data, output_data, &params);
 }
-TF_LITE_MICRO_TEST(4DDividedIntoTwo2DsTwo) {
+TEST(TransposeTest, 4DDividedIntoTwo2DsTwo) {
   int32_t shape[] = {2, 3, 4, 2};
   int32_t perms[] = {2, 3, 0, 1};
   float input_data[48];
@@ -466,7 +543,7 @@ TF_LITE_MICRO_TEST(4DDividedIntoTwo2DsTwo) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(4DDividedIntoTwo2DsThree) {
+TEST(TransposeTest, 4DDividedIntoTwo2DsThree) {
   int32_t shape[] = {2, 3, 4, 2};
   int32_t perms[] = {3, 0, 1, 2};
   float input_data[48];
@@ -484,7 +561,7 @@ TF_LITE_MICRO_TEST(4DDividedIntoTwo2DsThree) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(5DDividedIntoTwo2DsOne) {
+TEST(TransposeTest, 5DDividedIntoTwo2DsOne) {
   int32_t shape[] = {2, 3, 2, 2, 2};
   int32_t perms[] = {1, 4, 2, 3, 0};
   float input_data[48];
@@ -502,7 +579,7 @@ TF_LITE_MICRO_TEST(5DDividedIntoTwo2DsOne) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(5DDividedIntoTwo2DsTwo) {
+TEST(TransposeTest, 5DDividedIntoTwo2DsTwo) {
   int32_t shape[] = {2, 3, 2, 2, 2};
   int32_t perms[] = {2, 3, 0, 4, 1};
   float input_data[48];
@@ -520,7 +597,7 @@ TF_LITE_MICRO_TEST(5DDividedIntoTwo2DsTwo) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(5DDividedIntoTwo2DsThree) {
+TEST(TransposeTest, 5DDividedIntoTwo2DsThree) {
   int32_t shape[] = {2, 3, 2, 2, 2};
   int32_t perms[] = {3, 0, 4, 1, 2};
   float input_data[48];
@@ -538,7 +615,7 @@ TF_LITE_MICRO_TEST(5DDividedIntoTwo2DsThree) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(SimpleTestNoReorder) {
+TEST(TransposeTest, SimpleTestNoReorder) {
   int input_dims_data[] = {4, 1, 2, 3, 1};
   int output_dims_data[] = {4, 1, 2, 3, 1};
 
@@ -552,7 +629,7 @@ TF_LITE_MICRO_TEST(SimpleTestNoReorder) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(SimpleTestWithReorder) {
+TEST(TransposeTest, SimpleTestWithReorder) {
   int input_dims_data[] = {4, 1, 2, 3, 1};
   int output_dims_data[] = {4, 1, 2, 3, 1};
 
@@ -566,7 +643,7 @@ TF_LITE_MICRO_TEST(SimpleTestWithReorder) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(ComplexTestWithReorder) {
+TEST(TransposeTest, ComplexTestWithReorder) {
   int input_dims_data[] = {4, 2, 3, 4, 5};
   int output_dims_data[] = {4, 2, 3, 4, 5};
 
@@ -588,7 +665,7 @@ TF_LITE_MICRO_TEST(ComplexTestWithReorder) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TEST(Complex5DTestWithReorder) {
+TEST(TransposeTest, Complex5DTestWithReorder) {
   int input_dims_data[] = {5, 2, 3, 2, 2, 5};
   int output_dims_data[] = {5, 2, 3, 2, 2, 5};
 
@@ -610,4 +687,4 @@ TF_LITE_MICRO_TEST(Complex5DTestWithReorder) {
                                  expected_output_data, output_data, &params);
 }
 
-TF_LITE_MICRO_TESTS_END
+TF_LITE_MICRO_TESTS_MAIN

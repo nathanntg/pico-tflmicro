@@ -1,4 +1,4 @@
-/* Copyright 2019 The TensorFlow Authors. All Rights Reserved.
+/* Copyright 2025 The TensorFlow Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ limitations under the License.
 #include "tensorflow/lite/micro/debug_log.h"
 #include "tensorflow/lite/micro/kernels/kernel_runner.h"
 #include "tensorflow/lite/micro/test_helpers.h"
-#include "tensorflow/lite/micro/testing/micro_test.h"
+#include "tensorflow/lite/micro/testing/micro_test_v2.h"
 
 namespace tflite {
 namespace testing {
@@ -37,11 +37,11 @@ void ValidatePackGoldens(TfLiteTensor* tensors, int tensors_size,
   micro::KernelRunner runner(registration, tensors, tensors_size, inputs_array,
                              outputs_array, reinterpret_cast<void*>(&params));
 
-  TF_LITE_MICRO_EXPECT_EQ(kTfLiteOk, runner.InitAndPrepare());
-  TF_LITE_MICRO_EXPECT_EQ(kTfLiteOk, runner.Invoke());
+  EXPECT_EQ(kTfLiteOk, runner.InitAndPrepare());
+  EXPECT_EQ(kTfLiteOk, runner.Invoke());
 
   for (int i = 0; i < output_len; ++i) {
-    TF_LITE_MICRO_EXPECT_NEAR(golden[i], output[i], tolerance);
+    EXPECT_NEAR(golden[i], output[i], tolerance);
   }
 }
 
@@ -63,8 +63,8 @@ void TestPackTwoInputsFloat(int* input1_dims_data, const float* input1_data,
                                         CreateTensor(output_data, output_dims)};
 
   TfLitePackParams builtin_data = {
-      .values_count = 2,
-      .axis = axis,
+      2,
+      axis,
   };
   int inputs_array_data[] = {2, 0, 1};
   TfLiteIntArray* inputs_array = IntArrayFromInts(inputs_array_data);
@@ -97,8 +97,8 @@ void TestPackThreeInputsFloat(int* input1_dims_data, const float* input1_data,
                                         CreateTensor(output_data, output_dims)};
 
   TfLitePackParams builtin_data = {
-      .values_count = 3,
-      .axis = axis,
+      3,
+      axis,
   };
   int inputs_array_data[] = {3, 0, 1, 2};
   TfLiteIntArray* inputs_array = IntArrayFromInts(inputs_array_data);
@@ -110,44 +110,11 @@ void TestPackThreeInputsFloat(int* input1_dims_data, const float* input1_data,
                       1e-5f, output_data);
 }
 
-void TestPackTwoInputsQuantized(
-    int* input1_dims_data, const int8_t* input1_data, int* input2_dims_data,
-    const int8_t* input2_data, int axis, int* output_dims_data,
-    const int8_t* expected_output_data, int8_t* output_data) {
-  TfLiteIntArray* input1_dims = IntArrayFromInts(input1_dims_data);
-  TfLiteIntArray* input2_dims = IntArrayFromInts(input2_dims_data);
-  TfLiteIntArray* output_dims = IntArrayFromInts(output_dims_data);
-  const int output_dims_count = ElementCount(*output_dims);
-
-  constexpr int input_size = 2;
-  constexpr int output_size = 1;
-  constexpr int tensors_size = input_size + output_size;
-  TfLiteTensor tensors[tensors_size] = {
-      // CreateQuantizedTensor needs scale/zero_point values as input, but these
-      // values don't matter as to the functionality of PACK, so just set as 1.0
-      // and 128.
-      CreateQuantizedTensor(input1_data, input1_dims, 1.0, 128),
-      CreateQuantizedTensor(input2_data, input2_dims, 1.0, 128),
-      CreateQuantizedTensor(output_data, output_dims, 1.0, 128)};
-
-  TfLitePackParams builtin_data = {
-      .values_count = 2,
-      .axis = axis,
-  };
-  int inputs_array_data[] = {2, 0, 1};
-  TfLiteIntArray* inputs_array = IntArrayFromInts(inputs_array_data);
-  int outputs_array_data[] = {1, 2};
-  TfLiteIntArray* outputs_array = IntArrayFromInts(outputs_array_data);
-
-  ValidatePackGoldens(tensors, tensors_size, builtin_data, inputs_array,
-                      outputs_array, expected_output_data, output_dims_count,
-                      1e-5f, output_data);
-}
-
-void TestPackTwoInputsQuantized32(
-    int* input1_dims_data, const int32_t* input1_data, int* input2_dims_data,
-    const int32_t* input2_data, int axis, int* output_dims_data,
-    const int32_t* expected_output_data, int32_t* output_data) {
+template <typename T>
+void TestPackTwoInputs(int* input1_dims_data, const T* input1_data,
+                       int* input2_dims_data, const T* input2_data, int axis,
+                       int* output_dims_data, const T* expected_output_data,
+                       T* output_data) {
   TfLiteIntArray* input1_dims = IntArrayFromInts(input1_dims_data);
   TfLiteIntArray* input2_dims = IntArrayFromInts(input2_dims_data);
   TfLiteIntArray* output_dims = IntArrayFromInts(output_dims_data);
@@ -161,8 +128,8 @@ void TestPackTwoInputsQuantized32(
                                         CreateTensor(output_data, output_dims)};
 
   TfLitePackParams builtin_data = {
-      .values_count = 2,
-      .axis = axis,
+      2,
+      axis,
   };
   int inputs_array_data[] = {2, 0, 1};
   TfLiteIntArray* inputs_array = IntArrayFromInts(inputs_array_data);
@@ -177,9 +144,7 @@ void TestPackTwoInputsQuantized32(
 }  // namespace testing
 }  // namespace tflite
 
-TF_LITE_MICRO_TESTS_BEGIN
-
-TF_LITE_MICRO_TEST(PackFloatThreeInputs) {
+TEST(PackTest, PackFloatThreeInputs) {
   int input_shape[] = {1, 2};
   int output_shape[] = {2, 3, 2};
   const float input1_values[] = {1, 4};
@@ -195,7 +160,7 @@ TF_LITE_MICRO_TEST(PackFloatThreeInputs) {
       input3_values, axis, output_shape, golden, output_data);
 }
 
-TF_LITE_MICRO_TEST(PackFloatThreeInputsDifferentAxis) {
+TEST(PackTest, PackFloatThreeInputsDifferentAxis) {
   int input_shape[] = {1, 2};
   int output_shape[] = {2, 2, 3};
   const float input1_values[] = {1, 4};
@@ -211,7 +176,7 @@ TF_LITE_MICRO_TEST(PackFloatThreeInputsDifferentAxis) {
       input3_values, axis, output_shape, golden, output_data);
 }
 
-TF_LITE_MICRO_TEST(PackFloatThreeInputsNegativeAxis) {
+TEST(PackTest, PackFloatThreeInputsNegativeAxis) {
   int input_shape[] = {1, 2};
   int output_shape[] = {2, 2, 3};
   const float input1_values[] = {1, 4};
@@ -227,7 +192,7 @@ TF_LITE_MICRO_TEST(PackFloatThreeInputsNegativeAxis) {
       input3_values, axis, output_shape, golden, output_data);
 }
 
-TF_LITE_MICRO_TEST(PackFloatMultilDimensions) {
+TEST(PackTest, PackFloatMultiDimensions) {
   int input_shape[] = {2, 2, 3};
   int output_shape[] = {3, 2, 2, 3};
   const float input1_values[] = {1, 2, 3, 4, 5, 6};
@@ -242,7 +207,7 @@ TF_LITE_MICRO_TEST(PackFloatMultilDimensions) {
                                           output_shape, golden, output_data);
 }
 
-TF_LITE_MICRO_TEST(PackQuantizedMultilDimensions) {
+TEST(PackTest, PackInt8MultiDimensions) {
   int input_shape[] = {2, 2, 3};
   int output_shape[] = {3, 2, 2, 3};
   const int8_t input1_values[] = {1, 2, 3, 4, 5, 6};
@@ -252,12 +217,27 @@ TF_LITE_MICRO_TEST(PackQuantizedMultilDimensions) {
   constexpr int output_dims_count = 12;
   int8_t output_data[output_dims_count];
 
-  tflite::testing::TestPackTwoInputsQuantized(
+  tflite::testing::TestPackTwoInputs<int8_t>(input_shape, input1_values,
+                                             input_shape, input2_values, axis,
+                                             output_shape, golden, output_data);
+}
+
+TEST(PackTest, PackInt16MultiDimensions) {
+  int input_shape[] = {2, 2, 3};
+  int output_shape[] = {3, 2, 2, 3};
+  const int16_t input1_values[] = {1, 2, 3, 4, 5, 6};
+  const int16_t input2_values[] = {7, 8, 9, 10, 11, 12};
+  const int16_t golden[] = {1, 2, 3, 7, 8, 9, 4, 5, 6, 10, 11, 12};
+  const int axis = 1;
+  constexpr int output_dims_count = 12;
+  int16_t output_data[output_dims_count];
+
+  tflite::testing::TestPackTwoInputs<int16_t>(
       input_shape, input1_values, input_shape, input2_values, axis,
       output_shape, golden, output_data);
 }
 
-TF_LITE_MICRO_TEST(PackQuantized32MultilDimensions) {
+TEST(PackTest, PackInt32MultiDimensions) {
   int input_shape[] = {2, 2, 3};
   int output_shape[] = {3, 2, 2, 3};
   const int32_t input1_values[] = {1, 2, 3, 4, 5, 6};
@@ -267,9 +247,9 @@ TF_LITE_MICRO_TEST(PackQuantized32MultilDimensions) {
   constexpr int output_dims_count = 12;
   int32_t output_data[output_dims_count];
 
-  tflite::testing::TestPackTwoInputsQuantized32(
+  tflite::testing::TestPackTwoInputs<int32_t>(
       input_shape, input1_values, input_shape, input2_values, axis,
       output_shape, golden, output_data);
 }
 
-TF_LITE_MICRO_TESTS_END
+TF_LITE_MICRO_TESTS_MAIN

@@ -1,4 +1,4 @@
-/* Copyright 2023 The TensorFlow Authors. All Rights Reserved.
+/* Copyright 2025 The TensorFlow Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ limitations under the License.
 #include "tensorflow/lite/micro/debug_log.h"
 #include "tensorflow/lite/micro/kernels/kernel_runner.h"
 #include "tensorflow/lite/micro/test_helpers.h"
-#include "tensorflow/lite/micro/testing/micro_test.h"
+#include "tensorflow/lite/micro/testing/micro_test_v2.h"
 
 namespace tflite {
 namespace testing {
@@ -60,8 +60,8 @@ void TestUnpackThreeOutputsFloat(
   }
 
   TfLiteUnpackParams builtin_data = {
-      .num = 3,
-      .axis = axis,
+      3,
+      axis,
   };
 
   int inputs_array_data[] = {1, 0};
@@ -74,19 +74,19 @@ void TestUnpackThreeOutputsFloat(
                              outputs_array,
                              reinterpret_cast<void*>(&builtin_data));
 
-  TF_LITE_MICRO_EXPECT_EQ(kTfLiteOk, runner.InitAndPrepare());
-  TF_LITE_MICRO_EXPECT_EQ(kTfLiteOk, runner.Invoke());
+  EXPECT_EQ(kTfLiteOk, runner.InitAndPrepare());
+  EXPECT_EQ(kTfLiteOk, runner.Invoke());
 
   for (int i = 0; i < output1_dims_count; ++i) {
-    TF_LITE_MICRO_EXPECT_NEAR(expected_output1_data[i], output1_data[i], 1e-5f);
+    EXPECT_NEAR(expected_output1_data[i], output1_data[i], 1e-5f);
   }
 
   for (int i = 0; i < output2_dims_count; ++i) {
-    TF_LITE_MICRO_EXPECT_NEAR(expected_output2_data[i], output2_data[i], 1e-5f);
+    EXPECT_NEAR(expected_output2_data[i], output2_data[i], 1e-5f);
   }
 
   for (int i = 0; i < output3_dims_count; ++i) {
-    TF_LITE_MICRO_EXPECT_NEAR(expected_output3_data[i], output3_data[i], 1e-5f);
+    EXPECT_NEAR(expected_output3_data[i], output3_data[i], 1e-5f);
   }
 }
 
@@ -110,8 +110,8 @@ void TestUnpackOneOutputFloat(int* input_dims_data, const float* input_data,
   }
 
   TfLiteUnpackParams builtin_data = {
-      .num = 1,
-      .axis = axis,
+      1,
+      axis,
   };
 
   int inputs_array_data[] = {1, 0};
@@ -124,20 +124,23 @@ void TestUnpackOneOutputFloat(int* input_dims_data, const float* input_data,
                              outputs_array,
                              reinterpret_cast<void*>(&builtin_data));
 
-  TF_LITE_MICRO_EXPECT_EQ(kTfLiteOk, runner.InitAndPrepare());
-  TF_LITE_MICRO_EXPECT_EQ(kTfLiteOk, runner.Invoke());
+  EXPECT_EQ(kTfLiteOk, runner.InitAndPrepare());
+  EXPECT_EQ(kTfLiteOk, runner.Invoke());
 
   for (int i = 0; i < output_dims_count; ++i) {
-    TF_LITE_MICRO_EXPECT_NEAR(expected_output_data[i], output_data[i], 1e-5f);
+    EXPECT_NEAR(expected_output_data[i], output_data[i], 1e-5f);
   }
 }
 
-void TestUnpackThreeOutputsQuantized32(
-    int* input_dims_data, const int32_t* input_data, int axis,
-    int* output1_dims_data, const int32_t* expected_output1_data,
-    int* output2_dims_data, const int32_t* expected_output2_data,
-    int* output3_dims_data, const int32_t* expected_output3_data,
-    int32_t* output1_data, int32_t* output2_data, int32_t* output3_data) {
+template <typename T>
+void TestUnpackThreeOutputs(int* input_dims_data, const T* input_data, int axis,
+                            int* output1_dims_data,
+                            const T* expected_output1_data,
+                            int* output2_dims_data,
+                            const T* expected_output2_data,
+                            int* output3_dims_data,
+                            const T* expected_output3_data, T* output1_data,
+                            T* output2_data, T* output3_data) {
   TfLiteIntArray* input_dims = IntArrayFromInts(input_dims_data);
   TfLiteIntArray* output1_dims = IntArrayFromInts(output1_dims_data);
   TfLiteIntArray* output2_dims = IntArrayFromInts(output2_dims_data);
@@ -169,8 +172,8 @@ void TestUnpackThreeOutputsQuantized32(
   }
 
   TfLiteUnpackParams builtin_data = {
-      .num = 3,
-      .axis = axis,
+      3,
+      axis,
   };
 
   int inputs_array_data[] = {1, 0};
@@ -183,28 +186,26 @@ void TestUnpackThreeOutputsQuantized32(
                              outputs_array,
                              reinterpret_cast<void*>(&builtin_data));
 
-  TF_LITE_MICRO_EXPECT_EQ(kTfLiteOk, runner.InitAndPrepare());
-  TF_LITE_MICRO_EXPECT_EQ(kTfLiteOk, runner.Invoke());
+  EXPECT_EQ(kTfLiteOk, runner.InitAndPrepare());
+  EXPECT_EQ(kTfLiteOk, runner.Invoke());
 
   for (int i = 0; i < output1_dims_count; ++i) {
-    TF_LITE_MICRO_EXPECT_EQ(expected_output1_data[i], output1_data[i]);
+    EXPECT_EQ(expected_output1_data[i], output1_data[i]);
   }
 
   for (int i = 0; i < output2_dims_count; ++i) {
-    TF_LITE_MICRO_EXPECT_EQ(expected_output2_data[i], output2_data[i]);
+    EXPECT_EQ(expected_output2_data[i], output2_data[i]);
   }
 
   for (int i = 0; i < output3_dims_count; ++i) {
-    TF_LITE_MICRO_EXPECT_EQ(expected_output3_data[i], output3_data[i]);
+    EXPECT_EQ(expected_output3_data[i], output3_data[i]);
   }
 }
 
 }  // namespace testing
 }  // namespace tflite
 
-TF_LITE_MICRO_TESTS_BEGIN
-
-TF_LITE_MICRO_TEST(UnpackFloatThreeOutputs) {
+TEST(UnpackTest, UnpackFloatThreeOutputs) {
   int input_shape[] = {2, 3, 2};
   const float input_values[] = {1, 2, 3, 4, 5, 6};
   int output1_shape[] = {1, 2};
@@ -225,7 +226,7 @@ TF_LITE_MICRO_TEST(UnpackFloatThreeOutputs) {
       output1_data, output2_data, output3_data);
 }
 
-TF_LITE_MICRO_TEST(UnpackFloatThreeOutputsNegativeAxisTwo) {
+TEST(UnpackTest, UnpackFloatThreeOutputsNegativeAxisTwo) {
   int input_shape[] = {2, 3, 2};
   const float input_values[] = {1, 2, 3, 4, 5, 6};
   int output1_shape[] = {1, 2};
@@ -246,7 +247,7 @@ TF_LITE_MICRO_TEST(UnpackFloatThreeOutputsNegativeAxisTwo) {
       output1_data, output2_data, output3_data);
 }
 
-TF_LITE_MICRO_TEST(UnpackFloatOneOutput) {
+TEST(UnpackTest, UnpackFloatOneOutput) {
   int input_shape[] = {2, 1, 6};
   const float input_values[] = {1, 2, 3, 4, 5, 6};
   int output_shape[] = {1, 6};
@@ -257,7 +258,28 @@ TF_LITE_MICRO_TEST(UnpackFloatOneOutput) {
                                             output_shape, golden, output_data);
 }
 
-TF_LITE_MICRO_TEST(UnpackQuantized32ThreeOutputs) {
+TEST(UnpackTest, UnpackInt16ThreeOutputs) {
+  int input_shape[] = {2, 3, 2};
+  const int16_t input_values[] = {1, 2, 3, 4, 5, 6};
+  int output1_shape[] = {1, 2};
+  const int16_t output1_golden[] = {1, 2};
+  int output2_shape[] = {1, 2};
+  const int16_t output2_golden[] = {3, 4};
+  int output3_shape[] = {1, 2};
+  const int16_t output3_golden[] = {5, 6};
+  constexpr int output1_dims_count = 2;
+  constexpr int output2_dims_count = 2;
+  constexpr int output3_dims_count = 2;
+  int16_t output1_data[output1_dims_count];
+  int16_t output2_data[output2_dims_count];
+  int16_t output3_data[output3_dims_count];
+  tflite::testing::TestUnpackThreeOutputs<int16_t>(
+      input_shape, input_values, 0, output1_shape, output1_golden,
+      output2_shape, output2_golden, output3_shape, output3_golden,
+      output1_data, output2_data, output3_data);
+}
+
+TEST(UnpackTest, UnpackInt32ThreeOutputs) {
   int input_shape[] = {2, 3, 2};
   const int32_t input_values[] = {1, 2, 3, 4, 5, 6};
   int output1_shape[] = {1, 2};
@@ -272,10 +294,10 @@ TF_LITE_MICRO_TEST(UnpackQuantized32ThreeOutputs) {
   int32_t output1_data[output1_dims_count];
   int32_t output2_data[output2_dims_count];
   int32_t output3_data[output3_dims_count];
-  tflite::testing::TestUnpackThreeOutputsQuantized32(
+  tflite::testing::TestUnpackThreeOutputs<int32_t>(
       input_shape, input_values, 0, output1_shape, output1_golden,
       output2_shape, output2_golden, output3_shape, output3_golden,
       output1_data, output2_data, output3_data);
 }
 
-TF_LITE_MICRO_TESTS_END
+TF_LITE_MICRO_TESTS_MAIN
